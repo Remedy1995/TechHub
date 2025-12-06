@@ -1,24 +1,43 @@
 import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import Header from './components/Header';
+import Home from './pages/Home';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import QuestionsList from './pages/QuestionsList';
+import QuestionDetail from './pages/QuestionDetail';
+import NewQuestion from './pages/NewQuestion';
 
 function App() {
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <h1 className="text-2xl font-bold text-blue-500">
-            Welcome to My App
-          </h1>
+    <AuthProvider>
+      <Router>
+        <div className="min-h-screen bg-slate-50">
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route
+              path="/*"
+              element={
+                <>
+                  <Header />
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/category/:categoryId" element={<QuestionsList />} />
+                    <Route path="/questions/:id" element={<QuestionDetail />} />
+                    <Route path="/questions/new" element={<NewQuestion />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </>
+              }
+            />
+          </Routes>
         </div>
-      </header>
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="border-4 border-dashed border-gray-200 rounded-lg p-4">
-            <p className="text-gray-500">Start building your app here!</p>
-          </div>
-        </div>
-      </main>
-    </div>
+      </Router>
+    </AuthProvider>
   );
 }
+
 export default App;
 

@@ -7,6 +7,7 @@ const app = express();
 
 const connection = require('./config/Database');
 
+connection()
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname + '/public/build')));
@@ -40,13 +41,7 @@ app.use('/*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/build', 'index.html'));
 })
 
-connection().then(() => {
   app.listen(PORT, () => {
     console.log(`Server is now running on ${PORT}`);
   });
-}).catch((error) => {
-  console.error('Failed to start server:', error);
-  process.exit(1);
-});
-
 

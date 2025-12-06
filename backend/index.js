@@ -45,7 +45,7 @@ const startServer = async () => {
  try {
     await connection();    
   app.listen(PORT, () => {
-    console.log(`Server is now running on ${PORT}`);
+    console.log(`Server is now running here on ${PORT}`);
   });
  }
   catch (error){

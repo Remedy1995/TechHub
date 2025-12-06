@@ -2,12 +2,11 @@ const express = require("express");
 const PORT = process.env.PORT || 3001;
 const path = require('path');
 const cors = require('cors');
-require('dotenv').config({ path: path.join(__dirname, '../.env') });
+require('dotenv').config();
 const app = express();
 
 const connection = require('./config/Database');
 
-connection()
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname + '/public/build')));
@@ -41,7 +40,17 @@ app.use('/*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/build', 'index.html'));
 })
 
+
+const startServer = async () => {
+ try {
+    await connection();    
   app.listen(PORT, () => {
     console.log(`Server is now running on ${PORT}`);
   });
+ }
+  catch (error){
+     console.log('An error occured in starting server')
+  }
+}
 
+startServer()

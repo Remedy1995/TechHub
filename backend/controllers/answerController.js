@@ -1,60 +1,71 @@
-const Answer = require('../models/Answer');
-const Question = require('../models/Question');
+const supabase = require('../config/supabase');
 
-// @desc    Add an answer
-// @route   POST /api/questions/:questionId/answers
-// @access  Private
 const addAnswer = async (req, res) => {
     try {
         const { content } = req.body;
-        const question = await Question.findById(req.params.questionId);
 
-        if (!question) {
+        const { data: question, error: questionError } = await supabase
+            .from('questions')
+            .select('id')
+            .eq('id', req.params.questionId)
+            .maybeSingle();
+
+        if (questionError || !question) {
             return res.status(404).json({ message: 'Question not found' });
         }
 
-        const answer = new Answer({
-            content,
-            user: req.user._id,
-            question: question._id
-        });
+        const { data: answer, error } = await supabase
+            .from('answers')
+            .insert([{
+                content,
+                user_id: req.user.id,
+                question_id: question.id
+            }])
+            .select(`
+                *,
+                user:users(username)
+            `)
+            .single();
 
-        const createdAnswer = await answer.save();
-        
-        // Add answer to question's answers array
-        question.answers.push(createdAnswer._id);
-        await question.save();
+        if (error) throw error;
 
-        // Populate user details
-        await createdAnswer.populate('user', 'username');
-        
-        res.status(201).json(createdAnswer);
+        res.status(201).json(answer);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error' });
     }
 };
 
-// @desc    Update answer
-// @route   PUT /api/answers/:id
-// @access  Private
 const updateAnswer = async (req, res) => {
     try {
         const { content } = req.body;
-        const answer = await Answer.findById(req.params.id);
 
-        if (!answer) {
+        const { data: answer, error: answerError } = await supabase
+            .from('answers')
+            .select('*')
+            .eq('id', req.params.id)
+            .maybeSingle();
+
+        if (answerError || !answer) {
             return res.status(404).json({ message: 'Answer not found' });
         }
 
-        // Check if user is the owner of the answer
-        if (answer.user.toString() !== req.user._id.toString()) {
+        if (answer.user_id !== req.user.id) {
             return res.status(401).json({ message: 'Not authorised to answer this question' });
         }
 
-        answer.content = content || answer.content;
-        const updatedAnswer = await answer.save();
-        
+        const { data: updatedAnswer, error: updateError } = await supabase
+            .from('answers')
+            .update({
+                content: content || answer.content,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', req.params.id)
+            .select()
+            .single();
+
+        if (updateError) throw updateError;
+
         res.json(updatedAnswer);
     } catch (error) {
         console.error(error);
@@ -62,29 +73,29 @@ const updateAnswer = async (req, res) => {
     }
 };
 
-// @desc    Delete answer
-// @route   DELETE /api/answers/:id
-// @access  Private
 const deleteAnswer = async (req, res) => {
     try {
-        const answer = await Answer.findById(req.params.id);
+        const { data: answer, error: answerError } = await supabase
+            .from('answers')
+            .select('*')
+            .eq('id', req.params.id)
+            .maybeSingle();
 
-        if (!answer) {
+        if (answerError || !answer) {
             return res.status(404).json({ message: 'Answer not found' });
         }
 
-        // Check if user is the owner of the answer or an admin
-        if (answer.user.toString() !== req.user._id.toString() && !req.user.isAdmin) {
+        if (answer.user_id !== req.user.id && !req.user.is_admin) {
             return res.status(401).json({ message: 'User not authorized' });
         }
 
-        // Remove answer from question's answers array
-        await Question.updateOne(
-            { _id: answer.question },
-            { $pull: { answers: answer._id } }
-        );
+        const { error: deleteError } = await supabase
+            .from('answers')
+            .delete()
+            .eq('id', req.params.id);
 
-        await answer.deleteOne();
+        if (deleteError) throw deleteError;
+
         res.json({ message: 'Answer removed' });
     } catch (error) {
         console.error(error);

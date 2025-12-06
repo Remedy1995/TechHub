@@ -1,18 +1,21 @@
-const Question = require('../models/Question');
-const Category = require('../models/Category');
-const Answer = require('../models/Answer');
+const supabase = require('../config/supabase');
 
-// @desc    Get questions by category
-// @route   GET /api/questions/category/:categoryId
-// @access  Public
 const getQuestionsByCategory = async (req, res) => {
     try {
         const { categoryId } = req.params;
-        const questions = await Question.find({ category: categoryId })
-            .populate('user', 'username')
-            .populate('category', 'name')
-            .sort({ createdAt: -1 });
-        
+
+        const { data: questions, error } = await supabase
+            .from('questions')
+            .select(`
+                *,
+                user:users(username),
+                category:categories(name)
+            `)
+            .eq('category_id', categoryId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
         res.json(questions);
     } catch (error) {
         console.error(error);
@@ -20,104 +23,129 @@ const getQuestionsByCategory = async (req, res) => {
     }
 };
 
-// @desc    Create a question
-// @route   POST /api/questions
-// @access  Private
 const createQuestion = async (req, res) => {
     try {
         const { title, content, category } = req.body;
 
+        const { data: categoryExists, error: categoryError } = await supabase
+            .from('categories')
+            .select('id')
+            .eq('id', category)
+            .maybeSingle();
 
-        const categoryExists = await Category.findById(category);
-
-        if(!categoryExists) {
-            return res.status(404).json({ message : 'Question category does not exist'})
+        if (categoryError || !categoryExists) {
+            return res.status(404).json({ message: 'Question category does not exist' });
         }
-        
-        const question = new Question({
-            title,
-            content,
-            user: req.user._id,
-            category
-        });
 
-        const createdQuestion = await question.save();
-        
-        // Populate user and category details
-        await createdQuestion.populate('user', 'username');
-        await createdQuestion.populate('category', 'name');
-        
-        res.status(201).json(createdQuestion);
+        const { data: question, error } = await supabase
+            .from('questions')
+            .insert([{
+                title,
+                content,
+                user_id: req.user.id,
+                category_id: category
+            }])
+            .select(`
+                *,
+                user:users(username),
+                category:categories(name)
+            `)
+            .single();
+
+        if (error) throw error;
+
+        res.status(201).json(question);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error' });
     }
 };
 
-
-
 const updateQuestion = async (req, res) => {
-  try {
-      const {title , content , category} = req.body;
+    try {
+        const { title, content, category } = req.body;
 
-      // verify if the question category exist
-      const categoryExists = await Category.findById(category);
+        const { data: categoryExists, error: categoryError } = await supabase
+            .from('categories')
+            .select('id')
+            .eq('id', category)
+            .maybeSingle();
 
-      if (!categoryExists) {
-          return res.status(400).json({ message : "The question category does not exist"})
-      }
+        if (categoryError || !categoryExists) {
+            return res.status(400).json({ message: 'The question category does not exist' });
+        }
 
-    const question = await Question.findById(req.params.id)
+        const { data: question, error: questionError } = await supabase
+            .from('questions')
+            .select('*')
+            .eq('id', req.params.id)
+            .maybeSingle();
 
-     if (!question){
-        return res.status(404).json ({ message : 'The question does not exist'})
-     }
+        if (questionError || !question) {
+            return res.status(404).json({ message: 'The question does not exist' });
+        }
 
-    if(question.user.toString() !== req.user._id.toString()){
-        return res.status(403).json ({ message : 'Sorry you dont have permission to edit this question'})
+        if (question.user_id !== req.user.id) {
+            return res.status(403).json({ message: 'Sorry you dont have permission to edit this question' });
+        }
+
+        const { data: updatedQuestion, error: updateError } = await supabase
+            .from('questions')
+            .update({
+                title: title || question.title,
+                content: content || question.content,
+                category_id: category || question.category_id,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', req.params.id)
+            .select(`
+                *,
+                user:users(username),
+                category:categories(name)
+            `)
+            .single();
+
+        if (updateError) throw updateError;
+
+        res.json(updatedQuestion);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
     }
+};
 
-    question.title = title || question.title;
-    question.content = content || question.content;
-    question.category = category || question.category;
-
-    const updatedQuestion = await question.save();
-
-    await updatedQuestion.populate('user','username');
-    await updatedQuestion.populate('category','name');
-   res.json(updatedQuestion)
-
-  }
-  catch(error){
-    res.status(500).json({message : 'Server Error'})
-
-  }
-}
-
-
-
-// @desc    Delete a question
-// @route   DELETE /api/questions/:id
-// @access  Private (only question author or admin)
 const deleteQuestion = async (req, res) => {
     try {
-        const question = await Question.findById(req.params.id);
+        const { data: question, error: questionError } = await supabase
+            .from('questions')
+            .select('*')
+            .eq('id', req.params.id)
+            .maybeSingle();
 
-        if (!question) {
+        if (questionError || !question) {
             return res.status(404).json({ message: 'Question not found' });
         }
 
-        // Check if the current user is the author of the question or an admin
-        if (question.user.toString() !== req.user._id.toString() && !req.user.isAdmin) {
-            return res.status(403).json({ 
-                message: 'Not authorized to delete this question' 
+        if (question.user_id !== req.user.id && !req.user.is_admin) {
+            return res.status(403).json({
+                message: 'Not authorized to delete this question'
             });
         }
 
-        // Delete all answers associated with this question
-        await Answer.deleteMany({ question: question._id });
+        const { error: answersError } = await supabase
+            .from('answers')
+            .delete()
+            .eq('question_id', question.id);
 
-        await question.deleteOne();
+        if (answersError) throw answersError;
+
+        const { error: deleteError } = await supabase
+            .from('questions')
+            .delete()
+            .eq('id', req.params.id);
+
+        if (deleteError) throw deleteError;
+
         res.json({ message: 'Question removed' });
     } catch (error) {
         console.error(error);
@@ -125,36 +153,41 @@ const deleteQuestion = async (req, res) => {
     }
 };
 
-// @desc    Get question by ID
-// @route   GET /api/questions/:id
-// @access  Public
 const getQuestionById = async (req, res) => {
     try {
-        const question = await Question.findById(req.params.id)
-            .populate('user', 'username')
-            .populate('category', 'name')
-            .populate({
-                path: 'answers',
-                populate: {
-                    path: 'user',
-                    select: 'username'
-                }
-            });
+        const { data: question, error: questionError } = await supabase
+            .from('questions')
+            .select(`
+                *,
+                user:users(username),
+                category:categories(name)
+            `)
+            .eq('id', req.params.id)
+            .maybeSingle();
 
-        if (question) {
-            res.json(question);
-        } else {
-            res.status(404).json({ message: 'Question not found' });
+        if (questionError || !question) {
+            return res.status(404).json({ message: 'Question not found' });
         }
+
+        const { data: answers, error: answersError } = await supabase
+            .from('answers')
+            .select(`
+                *,
+                user:users(username)
+            `)
+            .eq('question_id', req.params.id)
+            .order('created_at', { ascending: false });
+
+        if (answersError) throw answersError;
+
+        question.answers = answers || [];
+
+        res.json(question);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error' });
     }
 };
-
-
-
-
 
 module.exports = {
     getQuestionsByCategory,

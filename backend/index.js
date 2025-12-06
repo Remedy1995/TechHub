@@ -2,22 +2,13 @@ const express = require("express");
 const PORT = process.env.PORT || 3001;
 const path = require('path');
 const cors = require('cors');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const app = express();
-
-const connection = require('./config/Database');
 
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname + '/public/build')));
 app.use((express.json()));
-
-require('dotenv').config();
-
-console.log('Environment variables:', {
-  MONGODB_URI: process.env.MONGODB_URI ? '*** URI is set ***' : 'MONGODB_URI is NOT set',
-  PORT: process.env.PORT || 'Using default port'
-});
 
 //routes - must be defined BEFORE the catch-all route
 app.use('/api/auth', require('./routes/auth'));
@@ -42,14 +33,8 @@ app.use('/*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/build', 'index.html'));
 })
 
-//connection to the database
-connection().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server is now running on ${PORT}`);
-  });
-}).catch((error) => {
-  console.error('Failed to start server:', error);
-  process.exit(1);
+app.listen(PORT, () => {
+  console.log(`Server is now running on ${PORT}`);
 });
 
 

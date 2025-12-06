@@ -43,11 +43,13 @@ app.use('/*', (req, res) => {
 })
 
 //connection to the database
-connection();
-
-
-app.listen(PORT, () => {
-  console.log(`Server is now running on ${PORT}`);
+connection().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Server is now running on ${PORT}`);
+  });
+}).catch((error) => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
 });
 
 

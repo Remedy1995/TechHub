@@ -40,6 +40,7 @@ app.use('/*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/build', 'index.html'));
 })
 
+await connection()
 
  app.listen(PORT, () => {
     console.log(`Server is now running here on ${PORT}`);

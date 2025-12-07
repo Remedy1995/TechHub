@@ -5,7 +5,9 @@
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node server/index.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "build": "cd ../frontend && npm install && npm run build"
   },
   "author": "",
   "license": "ISC",

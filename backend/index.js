@@ -17,6 +17,11 @@ console.log('Environment variables:', {
   PORT: process.env.PORT || 'Using default port'
 });
 
+
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, '../frontend/build')));
+
+
 //routes - must be defined BEFORE the catch-all route
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/categories', require('./routes/categories'));
@@ -35,9 +40,10 @@ app.use((err, req, res, next) => {
   next(err)
 })
 
+
 // Catch-all route for serving React app - must be LAST
-app.use('/*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/build', 'index.html'));
+app.use('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
 })
 
 //start the database server

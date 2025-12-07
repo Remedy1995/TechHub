@@ -203,3 +203,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Built with Create React App
 - Styled with Tailwind CSS
 - Icons from React Icons
+
+
+#GitHub Project Url 
+https://github.com/ElvisAddo/TechHub.git

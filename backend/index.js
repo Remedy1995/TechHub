@@ -40,20 +40,10 @@ app.use('/*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/build', 'index.html'));
 })
 
-await connection()
+//start the database server
+connection()
 
  app.listen(PORT, () => {
     console.log(`Server is now running here on ${PORT}`);
   });
 
-// const startServer = async () => {
-//  try {
-//     await connection();    
- 
-//  }
-//   catch (error){
-//      console.log('An error occured in starting server')
-//   }
-// }
-
-// await startServer()

@@ -37,7 +37,7 @@ const userSchema = new mongoose.Schema({
 });
 
 // Hash password before saving
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
     if (this.isModified('password')) {
         this.password = await bcrypt.hash(this.password, 8);
     }
@@ -45,12 +45,12 @@ userSchema.pre('save', async function(next) {
 });
 
 // Generate auth token
-userSchema.methods.generateAuthToken = async function() {
-    const token = jwt.sign({ 
+userSchema.methods.generateAuthToken = async function () {
+    const token = jwt.sign({
         _id: this._id.toString(),
-        isAdmin: this.isAdmin 
+        isAdmin: this.isAdmin
     }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    
+
     this.tokens = this.tokens.concat({ token });
     await this.save();
     return token;
@@ -70,7 +70,7 @@ userSchema.statics.findByCredentials = async (email, password) => {
 };
 
 // Hide sensitive data
-userSchema.methods.toJSON = function() {
+userSchema.methods.toJSON = function () {
     const user = this.toObject();
     delete user.password;
     delete user.tokens;

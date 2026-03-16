@@ -1,17 +1,7 @@
 import api from '../utils/api';
 import { User } from './authService';
 import { Category } from './categoryService';
-
-export interface Answer {
-  _id: string;
-  content: string;
-  user: User;
-  question: string;
-  isAccepted: boolean;
-  votes: number;
-  createdAt: string;
-  updatedAt: string;
-}
+import { Answer } from './answerService';
 
 export interface Question {
   _id: string;
@@ -19,7 +9,7 @@ export interface Question {
   content: string;
   user: User | string;
   category: Category | string;
-  answers: Answer[];
+  answers: Answer[];  // Using Answer type from answerService
   views: number;
   votes: number;
   createdAt: string;

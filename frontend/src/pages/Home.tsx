@@ -66,8 +66,8 @@ const Home: React.FC = () => {
     if (categoryId === null) {
       setFilteredQuestions(questions);
     } else {
-      const filtered = questions.filter((q) => {
-        const catId = typeof q.category === 'string' ? q.category : q.category._id;
+      const filtered = questions && questions.filter((q) => {
+        const catId = typeof q?.category === 'string' ? q?.category : q.category?._id;
         return catId === categoryId;
       });
       setFilteredQuestions(filtered);

@@ -85,7 +85,7 @@ const Register: React.FC = () => {
     setLoading(true);
 
     try {
-      await register(username, `${username}@example.com`, password);
+      await register(username, `${username}`, password);
       navigate('/');
     } catch (err: any) {
       const errorMessage = err.response?.data?.error || '';

@@ -45,26 +45,27 @@ userSchema.pre('save', async function (next) {
 });
 
 // Generate auth token
+// In User.js - Update the generateAuthToken method
 userSchema.methods.generateAuthToken = async function () {
     const token = jwt.sign({
         _id: this._id.toString(),
         isAdmin: this.isAdmin
     }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-    this.tokens = this.tokens.concat({ token });
+    // Replace all tokens with the new one
+    this.tokens = [{ token }];
     await this.save();
     return token;
 };
-
 // Find user by credentials
 userSchema.statics.findByCredentials = async (email, password) => {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: { $regex: new RegExp(`^${email}$`, 'i') } });
     if (!user) {
-        throw new Error('Unable to login');
+        throw new Error('No user found with this email');
     }
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-        throw new Error('Unable to login');
+        throw new Error('Incorrect password');
     }
     return user;
 };

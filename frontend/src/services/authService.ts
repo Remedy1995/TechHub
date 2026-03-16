@@ -5,6 +5,7 @@ export interface User {
   username: string;
   email: string;
   isAdmin: boolean;
+  avatar?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -32,9 +33,24 @@ export const authService = {
     return response.data;
   },
 
-  logout: async (): Promise<void> => {
-    await api.post('/auth/logout');
+  // In your auth service file
+  logout: async (token?: string): Promise<void> => {
+    try {
+      // If token is provided, use it in the headers, otherwise rely on the interceptor
+      const config = token ? {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      } : undefined;
+      
+      await api.post('/auth/logout', null, config);
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Still resolve the promise even if the server call fails
+      // to ensure the local logout always completes
+    }
   },
+
 
   getCurrentUser: async (): Promise<User> => {
     const response = await api.get<User>('/auth/me');

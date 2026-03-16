@@ -23,28 +23,52 @@ const register = async (req, res) => {
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).send({ error: 'Please provide both email and password' });
+        }
+        
         const user = await User.findByCredentials(email, password);
         const token = await user.generateAuthToken();
 
-        res.send({ user, token });
+        res.send({ 
+            user: {
+                _id: user._id,
+                username: user.username,
+                email: user.email,
+                isAdmin: user.isAdmin
+            }, 
+            token 
+        });
     } catch (error) {
-        res.status(400).send({ error: 'Invalid login credentials' });
+        console.error('Login error:', error);
+        
+        if (error.message.includes('No user found')) {
+            return res.status(400).send({ error: 'No account found with this email' });
+        }
+        if (error.message.includes('Incorrect password')) {
+            return res.status(400).send({ error: 'Incorrect password' });
+        }
+        
+        // For any other error, log it and return a generic message
+        console.error('Unexpected login error:', error);
+        res.status(400).send({ 
+            error: 'Login failed. Please check your credentials and try again.',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 };
 
+// In authController.js - Update the logout function
 const logout = async (req, res) => {
     try {
-        req.user.tokens = req.user.tokens.filter((token) => {
-            return token.token !== req.token;
-        });
+        // Remove all tokens (since we're only keeping one now)
+        req.user.tokens = [];
         await req.user.save();
-
         res.send({ message: 'Logged out successfully' });
     } catch (error) {
         res.status(500).send({ error: 'Error logging out' });
     }
 };
-
 module.exports = {
     register,
     login,
